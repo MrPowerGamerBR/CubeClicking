@@ -216,7 +216,8 @@ class CubeClicking {
         val projection = Matrix4f()
 
         if (this.useOrthographicProjection) {
-            projection.ortho(-windowWidth.toFloat() / 256f, windowWidth.toFloat() / 256f, -windowHeight.toFloat() / 256f, windowHeight.toFloat() / 256f, 0.5f, 10000.0f)
+            // We don't use the window width/height because that changes the aspect ratio of the projection and that looks a bit wonky
+            projection.ortho(-4f, 4f, -4f, 4f, 0.5f, 10000.0f)
         } else {
             // Projection matrix: 45° Field of View, 4:3 ratio, display range: 0.1 unit <-> 100 units
             projection.perspective(Math.toRadians(45.0).toFloat(), windowWidth.toFloat() / windowHeight.toFloat(), 0.1f, 100.0f)
