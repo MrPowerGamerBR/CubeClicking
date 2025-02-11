@@ -1,9 +1,6 @@
 package net.perfectdreams.cubeclicking
 
-import org.joml.Matrix4f
-import org.joml.Vector2f
-import org.joml.Vector3f
-import org.joml.Vector4f
+import org.joml.*
 import org.lwjgl.Version
 import org.lwjgl.glfw.Callbacks.glfwFreeCallbacks
 import org.lwjgl.glfw.GLFW
@@ -20,6 +17,7 @@ import org.lwjgl.opengl.GL32
 import org.lwjgl.system.MemoryStack
 import org.lwjgl.system.MemoryStack.stackPush
 import org.lwjgl.system.MemoryUtil
+import java.lang.Math
 import java.nio.IntBuffer
 import kotlin.math.max
 import kotlin.math.min
@@ -417,19 +415,13 @@ class CubeClicking {
             intersectedCube.isActive = true
         } else if (spawnCubeIfNotConflicting) {
             // If we didn't intersect any cube, let's attempt to spawn a new cube!
+            val t = -rayOrigin.y / rayDirection.y
+            val target = rayOrigin.plus(rayDirection.mul(t))
 
-            // Fuck this is horrible
-            val rayStart = Vector3f(rayOrigin)
-
-            while (rayStart.y > 0) {
-                rayStart.add(rayDirection)
-            }
-
-            println("found! ${rayStart.x}, ${rayStart.y}, ${rayStart.z}")
+            println("found! ${target.x}, ${target.y}, ${target.z}")
             println("ray origin ${rayOrigin.x}, ${rayOrigin.y}, ${rayOrigin.z}")
 
-            rayStart.y = 0.0f
-            val loadedCube = Cube(Mesh(cubeVAO, Vector3f(rayStart.x, 0f, rayStart.z)))
+            val loadedCube = Cube(Mesh(cubeVAO, Vector3f(target.x, target.y, target.z)))
 
             loadedCubes.add(loadedCube)
         }
