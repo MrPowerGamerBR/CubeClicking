@@ -19,6 +19,7 @@ import org.lwjgl.system.MemoryStack.stackPush
 import org.lwjgl.system.MemoryUtil
 import java.lang.Math
 import java.nio.IntBuffer
+import java.util.Random
 import kotlin.math.max
 import kotlin.math.min
 
@@ -167,6 +168,8 @@ class CubeClicking {
         updateViewMatrix()
 
         val programId = shaderManager.loadShader("game.vsh", "game.fsh")
+        val programUIId = shaderManager.loadShader("ui.vsh", "ui.fsh")
+        val programCubeUIId = shaderManager.loadShader("cube_ui.vsh", "cube_ui.fsh")
 
         val cubeVAO = initRender()
         this.cubeVAO = cubeVAO
@@ -179,6 +182,8 @@ class CubeClicking {
         val cube3 = Cube(Mesh(cubeVAO, Vector3f(-3f, 0f, -3f)))
 
         cube1.isActive = true
+
+        val spriteVAO = initRenderSprite()
 
         // This is intentionally in reverse to test the mouse click raytracing depth checks
         // Example: Clicking on the cube1 while cube3 is behind it should click cube1, NOT cube3!
@@ -200,6 +205,10 @@ class CubeClicking {
                     12 * 3
                 )
             }
+
+            drawSprite(programUIId, spriteVAO, 1, Vector2f(0f, 0f), Vector2f(32f, 32f))
+
+            drawCubeAsUIElement(programCubeUIId, cubeVAO, Vector2f(windowWidth - 32f, windowHeight - 32f), Vector2f(32f, 32f))
 
             glfwSwapBuffers(window) // swap the color buffers
 
@@ -247,8 +256,6 @@ class CubeClicking {
     // VAO = Vertex Array Object
     // VBO = Vertex Buffer Object
     private fun initRender(): Int {
-        val vbo = glGenBuffers()
-
         // A cube!
         val vertices = floatArrayOf(
             -1.0f,-1.0f,-1.0f, // triangle 1 : begin
@@ -289,22 +296,44 @@ class CubeClicking {
             1.0f,-1.0f, 1.0f
         )
 
+        // Random colors! (Only used for the cube in the UI layer)
+        val randomColors = (0 until vertices.size).map {
+            Random().nextFloat()
+        }.toFloatArray()
+
+        // Create and bind VAO
         val quadVAO = GL32.glGenVertexArrays()
-
-        glBindBuffer(GL_ARRAY_BUFFER, vbo)
-        glBufferData(GL_ARRAY_BUFFER, vertices, GL_STATIC_DRAW)
-
         glBindVertexArray(quadVAO)
-        glEnableVertexAttribArray(0)
 
+        // Generate two VBOs (one for the vertex positions, another for the colors)
+        val vbosArray = IntArray(2)
+        glGenBuffers(vbosArray)
+
+        // Position VBO
+        glBindBuffer(GL_ARRAY_BUFFER, vbosArray[0])
+        glBufferData(GL_ARRAY_BUFFER, vertices, GL_STATIC_DRAW)
         // When reading pointers like this, think like this
         // The "size" is how much is the TARGET array that will be passed to the vertex shader
         // The "stride" is how much data WILL BE READ
         // The "pointer" is WHERE the data is in the ARRAY THAT WAS READ
         glVertexAttribPointer(0, 3, GL_FLOAT, false, 0, 0)
+        glEnableVertexAttribArray(0)
 
+        // Colors VBO
+        glBindBuffer(GL_ARRAY_BUFFER, vbosArray[1])
+        glBufferData(GL_ARRAY_BUFFER, randomColors, GL_STATIC_DRAW)
+        // When reading pointers like this, think like this
+        // The "size" is how much is the TARGET array that will be passed to the vertex shader
+        // The "stride" is how much data WILL BE READ
+        // The "pointer" is WHERE the data is in the ARRAY THAT WAS READ
+        glVertexAttribPointer(1, 3, GL_FLOAT, false, 0, 0)
+        glEnableVertexAttribArray(1)
+
+        // Unbind
         glBindBuffer(GL_ARRAY_BUFFER, 0)
         glBindVertexArray(0)
+        glDisableVertexAttribArray(0)
+        glDisableVertexAttribArray(1)
 
         return quadVAO
     }
@@ -505,5 +534,94 @@ class CubeClicking {
         }
 
         return true
+    }
+
+    // VAO = Vertex Array Object
+    // VBO = Vertex Buffer Object
+    private fun initRenderSprite(): Int {
+        val vbo = glGenBuffers()
+        val vertices = floatArrayOf(
+            // pos
+            0.0f, 1.0f,
+            1.0f, 0.0f,
+            0.0f, 0.0f,
+
+            0.0f, 1.0f,
+            1.0f, 1.0f,
+            1.0f, 0.0f,
+        )
+
+        val quadVAO = GL32.glGenVertexArrays()
+
+        glBindBuffer(GL_ARRAY_BUFFER, vbo)
+        glBufferData(GL_ARRAY_BUFFER, vertices, GL_STATIC_DRAW)
+
+        glBindVertexArray(quadVAO)
+        glEnableVertexAttribArray(0)
+        glVertexAttribPointer(0, 2, GL_FLOAT, false, 0, 0)
+        glBindBuffer(GL_ARRAY_BUFFER, 0)
+        glBindVertexArray(0)
+
+        return quadVAO
+    }
+
+    fun drawSprite(programId: Int, quadVAO: Int, textureId: Int, position: Vector2f, size: Vector2f) {
+        glUseProgram(programId)
+
+        // glActiveTexture(GL_TEXTURE0)
+        // glBindTexture(GL_TEXTURE_2D, textureId)
+
+        // Model matrix: where the mesh is in the world
+        val model = Matrix4f()
+        model.translate(position.x, position.y, 0.0f)
+        model.scale(size.x, size.y, 1.0f)
+
+        val projection = Matrix4f().ortho(0.0f, windowWidth.toFloat(), windowHeight.toFloat(), 0.0f, -1.0f, 1.0f)
+
+        val projectionLocation = glGetUniformLocation(programId, "projection")
+        val modelLocation = glGetUniformLocation(programId, "model")
+        glUniformMatrix4fv(projectionLocation, false, projection.get(FloatArray(16)))
+        glUniformMatrix4fv(modelLocation, false, model.get(FloatArray(16)))
+
+        // Our ModelViewProjection: multiplication of our 3 matrices
+        // val mvp = projection.mul(view, Matrix4f()).mul(model, Matrix4f()) // Remember, matrix multiplication is the other way around
+
+        glBindVertexArray(quadVAO)
+        glDrawArrays(GL_TRIANGLES, 0, 6)
+        glBindVertexArray(0)
+    }
+
+    fun drawCubeAsUIElement(programId: Int, quadVAO: Int, position: Vector2f, size: Vector2f) {
+        glUseProgram(programId)
+
+        // val location = glGetUniformLocation(programId, "MVP")
+        val modelLocation = glGetUniformLocation(programId, "model")
+        val viewLocation = glGetUniformLocation(programId, "view")
+        val projectionLocation = glGetUniformLocation(programId, "projection")
+        val isActiveLocation = glGetUniformLocation(programId, "isActive")
+        val timeLocation = glGetUniformLocation(programId, "time")
+        val cameraPositionLocation = glGetUniformLocation(programId, "cameraPos")
+
+        // Model matrix: where the mesh is in the world
+        val model = Matrix4f()
+        // stay away from me
+        model.translate(position.x, position.y, 0.0f)
+        model.scale(size.x, size.y, 1.0f)
+        model.rotateY(GLFW.glfwGetTime().toFloat())
+
+        // Our ModelViewProjection: multiplication of our 3 matrices
+        // val mvp = projection.mul(view, Matrix4f()).mul(model, Matrix4f()) // Remember, matrix multiplication is the other way around
+
+        glUniformMatrix4fv(modelLocation, false, model.get(FloatArray(16)))
+        glUniformMatrix4fv(viewLocation, false, view.get(FloatArray(16)))
+        // The near/far values are necessary to avoid the box clipping, if the near value is near 0 (heh), the box won't be fully rendered (because it is clipping inside)
+        glUniformMatrix4fv(projectionLocation, false, Matrix4f().ortho(0.0f, windowWidth.toFloat(), windowHeight.toFloat(), 0.0f, -16.0f, 1.0f).get(FloatArray(16)))
+        glUniform1i(isActiveLocation, 0)
+        glUniform1f(timeLocation, GLFW.glfwGetTime().toFloat())
+        glUniform3f(cameraPositionLocation, cameraPosition.x, cameraPosition.y, cameraPosition.z)
+
+        glBindVertexArray(quadVAO)
+        glDrawArrays(GL_TRIANGLES, 0, 12 * 3)
+        glBindVertexArray(0)
     }
 }

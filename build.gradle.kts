@@ -1,5 +1,6 @@
 plugins {
     kotlin("jvm") version "2.1.0"
+    application
 }
 
 group = "net.perfectdreams.cubeclicking"
@@ -39,4 +40,8 @@ tasks.test {
 
 kotlin {
     jvmToolchain(21)
+}
+
+application {
+    mainClass = "net.perfectdreams.cubeclicking.CubeClickingLauncher"
 }
