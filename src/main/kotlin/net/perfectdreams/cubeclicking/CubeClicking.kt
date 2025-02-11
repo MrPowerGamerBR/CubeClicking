@@ -124,7 +124,7 @@ class CubeClicking {
                 Vector2f(mouseX.toFloat(), mouseY.toFloat())
             }
 
-            processMouseClick(mousePos)
+            processMouseClick(mousePos, button == GLFW.GLFW_MOUSE_BUTTON_RIGHT)
         }
 
         stackPush().use { stack ->
@@ -154,6 +154,8 @@ class CubeClicking {
         glfwShowWindow(window)
     }
 
+    var cubeVAO = -1
+
     private fun loop() {
         // This line is critical for LWJGL's interoperation with GLFW's
         // OpenGL context, or any context that is managed externally.
@@ -169,6 +171,7 @@ class CubeClicking {
         val programId = shaderManager.loadShader("game.vsh", "game.fsh")
 
         val cubeVAO = initRender()
+        this.cubeVAO = cubeVAO
 
         // Set the clear color
         glClearColor(1.0f, 0.0f, 0.0f, 0.0f)
@@ -338,7 +341,7 @@ class CubeClicking {
         glBindVertexArray(0)
     }
 
-    private fun processMouseClick(mousePos: Vector2f) {
+    private fun processMouseClick(mousePos: Vector2f, spawnCubeIfNotConflicting: Boolean) {
         // OpenGL uses a coordinate system where:
         //    X: [−1,1][−1,1] (left to right)
         //    Y: [−1,1][−1,1] (bottom to top)
@@ -372,6 +375,7 @@ class CubeClicking {
         farPoint.div(farPoint.w)
 
         val rayOrigin = Vector3f(nearPoint.x, nearPoint.y, nearPoint.z)
+        // The ray end does not mean the end of the ray, it is mostly used to find out the direction of the ray
         val rayEnd = Vector3f(farPoint.x, farPoint.y, farPoint.z)
         val rayDirection = rayEnd.sub(rayOrigin).normalize()
 
@@ -411,6 +415,23 @@ class CubeClicking {
 
         if (intersectedCube != null) {
             intersectedCube.isActive = true
+        } else if (spawnCubeIfNotConflicting) {
+            // If we didn't intersect any cube, let's attempt to spawn a new cube!
+
+            // Fuck this is horrible
+            val rayStart = Vector3f(rayOrigin)
+
+            while (rayStart.y > 0) {
+                rayStart.add(rayDirection)
+            }
+
+            println("found! ${rayStart.x}, ${rayStart.y}, ${rayStart.z}")
+            println("ray origin ${rayOrigin.x}, ${rayOrigin.y}, ${rayOrigin.z}")
+
+            rayStart.y = 0.0f
+            val loadedCube = Cube(Mesh(cubeVAO, Vector3f(rayStart.x, 0f, rayStart.z)))
+
+            loadedCubes.add(loadedCube)
         }
     }
 
