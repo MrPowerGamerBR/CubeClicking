@@ -8,14 +8,13 @@ import org.lwjgl.glfw.Callbacks.glfwFreeCallbacks
 import org.lwjgl.glfw.GLFW
 import org.lwjgl.glfw.GLFW.*
 import org.lwjgl.glfw.GLFWErrorCallback
-import org.lwjgl.opengl.GL
-import org.lwjgl.opengl.GL11
-import org.lwjgl.opengl.GL11.GL_COLOR_BUFFER_BIT
-import org.lwjgl.opengl.GL11.GL_DEPTH_BUFFER_BIT
-import org.lwjgl.opengl.GL20.*
-import org.lwjgl.opengl.GL30.glBindVertexArray
-import org.lwjgl.opengl.GL30.glUseProgram
-import org.lwjgl.opengl.GL32
+import org.lwjgl.opengles.GLES
+import org.lwjgl.opengles.GLES32
+import org.lwjgl.opengles.GLES32.GL_COLOR_BUFFER_BIT
+import org.lwjgl.opengles.GLES32.GL_DEPTH_BUFFER_BIT
+import org.lwjgl.opengles.GLES32.*
+import org.lwjgl.opengles.GLES32.glBindVertexArray
+import org.lwjgl.opengles.GLES32.glUseProgram
 import org.lwjgl.system.MemoryStack
 import org.lwjgl.system.MemoryStack.stackPush
 import org.lwjgl.system.MemoryUtil
@@ -76,10 +75,10 @@ class CubeClicking {
 
         // Set GLFW to use OpenGL Core Profile
         // OpenGL 3.3
-        GLFW.glfwWindowHint(GLFW.GLFW_CONTEXT_VERSION_MAJOR, 3)
-        GLFW.glfwWindowHint(GLFW.GLFW_CONTEXT_VERSION_MINOR, 3)
-        GLFW.glfwWindowHint(GLFW.GLFW_OPENGL_PROFILE, GLFW.GLFW_OPENGL_CORE_PROFILE)
-        GLFW.glfwWindowHint(GLFW.GLFW_OPENGL_FORWARD_COMPAT, GLFW.GLFW_TRUE)
+        glfwWindowHint(GLFW_CONTEXT_CREATION_API, GLFW_EGL_CONTEXT_API)
+        glfwWindowHint(GLFW_CLIENT_API, GLFW_OPENGL_ES_API)
+        glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3)
+        glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 0)
 
         // Create the window
         window = glfwCreateWindow(windowWidth, windowHeight, "Hello World!", MemoryUtil.NULL, MemoryUtil.NULL)
@@ -163,8 +162,8 @@ class CubeClicking {
         // LWJGL detects the context that is current in the current thread,
         // creates the GLCapabilities instance and makes the OpenGL
         // bindings available for use.
-        GL.createCapabilities()
-        glEnable(GL11.GL_DEPTH_TEST)
+        GLES.createCapabilities()
+        glEnable(GLES32.GL_DEPTH_TEST)
 
         updateProjectionMatrix()
         updateViewMatrix()
@@ -307,7 +306,7 @@ class CubeClicking {
         }.toFloatArray()
 
         // Create and bind VAO
-        val quadVAO = GL32.glGenVertexArrays()
+        val quadVAO = GLES32.glGenVertexArrays()
         glBindVertexArray(quadVAO)
 
         // Generate two VBOs (one for the vertex positions, another for the colors)
@@ -558,7 +557,7 @@ class CubeClicking {
             1.0f, 0.0f,
         )
 
-        val quadVAO = GL32.glGenVertexArrays()
+        val quadVAO = GLES32.glGenVertexArrays()
 
         glBindBuffer(GL_ARRAY_BUFFER, vbo)
         glBufferData(GL_ARRAY_BUFFER, vertices, GL_STATIC_DRAW)

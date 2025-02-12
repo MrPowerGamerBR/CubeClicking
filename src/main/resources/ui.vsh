@@ -1,4 +1,5 @@
-#version 330 core
+#version 300 es
+precision highp float;
 
 layout (location = 0) in vec2 vertex; // vec2<position>, vec2<texCoords>
 

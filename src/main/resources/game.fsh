@@ -1,4 +1,5 @@
-#version 330 core
+#version 300 es
+precision highp float;
 
 in vec3 fragPos;
 out vec4 FragColor;
@@ -13,7 +14,7 @@ void main()
     float distance = length(fragPos - cameraPos); // Euclidean distance
 
     if (isActive) {
-        float pulsation = (sin(time * 2) + 1.0) / 2.0; // Normalize sine to 0-1 range
+        float pulsation = (sin(time * 2.0) + 1.0) / 2.0; // Normalize sine to 0-1 range
         FragColor = vec4(0.0f, (0.25f * pulsation) + 0.75f, 0.0f, 1.0f);
     } else {
         float targetColor = 1.0f - (distance * 0.05f);
