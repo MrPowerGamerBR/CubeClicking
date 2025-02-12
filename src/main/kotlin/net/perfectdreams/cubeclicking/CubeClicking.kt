@@ -1,5 +1,7 @@
 package net.perfectdreams.cubeclicking
 
+import net.perfectdreams.harmony.math.Matrix4f
+import net.perfectdreams.harmony.math.Vector4f
 import org.joml.*
 import org.lwjgl.Version
 import org.lwjgl.glfw.Callbacks.glfwFreeCallbacks
@@ -28,8 +30,8 @@ class CubeClicking {
     private var window: Long = 0
     val shaderManager = ShaderManager()
 
-    val windowWidth = 300
-    val windowHeight = 300
+    val windowWidth = 1920
+    val windowHeight = 1080
 
     val loadedCubes = mutableListOf<Cube>()
 
@@ -227,10 +229,10 @@ class CubeClicking {
 
         if (this.useOrthographicProjection) {
             // We don't use the window width/height because that changes the aspect ratio of the projection and that looks a bit wonky
-            projection.ortho(-4f, 4f, -4f, 4f, 0.5f, 10000.0f)
+            projection.ortho(-4f, 4f, -4f, 4f, 0.5f, 10000.0f, false)
         } else {
             // Projection matrix: 45° Field of View, 4:3 ratio, display range: 0.1 unit <-> 100 units
-            projection.perspective(Math.toRadians(45.0).toFloat(), windowWidth.toFloat() / windowHeight.toFloat(), 0.1f, 100.0f)
+            projection.perspectiveGeneric(Math.toRadians(45.0).toFloat(), windowWidth.toFloat() / windowHeight.toFloat(), 0.1f, 100.0f, false, projection)
         }
         
         this.projection = projection
@@ -246,11 +248,14 @@ class CubeClicking {
 
         println("Camera Position: ${this.cameraPosition.x}, ${this.cameraPosition.y}, ${this.cameraPosition.z}")
 
-        this.view = Matrix4f().lookAt(
-            this.cameraPosition,
-            Vector3f(0f, 0f, 0f),
-            Vector3f(0f, 1f, 0f) // Head is up (set to 0,-1,0 to look upside-down)
+        val newView = Matrix4f()
+        newView.lookAtGeneric(
+            this.cameraPosition.x, this.cameraPosition.y, this.cameraPosition.z,
+            0f, 0f, 0f,
+            0f, 1f, 0f, // Head is up (set to 0,-1,0 to look upside-down)
+            newView
         )
+        this.view = newView
     }
 
     // VAO = Vertex Array Object
@@ -332,6 +337,8 @@ class CubeClicking {
         // Unbind
         glBindBuffer(GL_ARRAY_BUFFER, 0)
         glBindVertexArray(0)
+
+        // You technically don't need to disable these
         glDisableVertexAttribArray(0)
         glDisableVertexAttribArray(1)
 
@@ -351,14 +358,14 @@ class CubeClicking {
 
         // Model matrix: where the mesh is in the world
         val model = Matrix4f()
-            .translate(position)
+            .translate(position.x, position.y, position.z)
 
         // Our ModelViewProjection: multiplication of our 3 matrices
         // val mvp = projection.mul(view, Matrix4f()).mul(model, Matrix4f()) // Remember, matrix multiplication is the other way around
 
-        glUniformMatrix4fv(modelLocation, false, model.get(FloatArray(16)))
-        glUniformMatrix4fv(viewLocation, false, view.get(FloatArray(16)))
-        glUniformMatrix4fv(projectionLocation, false, projection.get(FloatArray(16)))
+        glUniformMatrix4fv(modelLocation, false, model.getAsFloatArray())
+        glUniformMatrix4fv(viewLocation, false, view.getAsFloatArray())
+        glUniformMatrix4fv(projectionLocation, false, projection.getAsFloatArray())
         glUniform1i(isActiveLocation, if (isActive) 1 else 0)
         glUniform1f(timeLocation, GLFW.glfwGetTime().toFloat())
         glUniform3f(cameraPositionLocation, cameraPosition.x, cameraPosition.y, cameraPosition.z)
@@ -576,12 +583,12 @@ class CubeClicking {
         model.translate(position.x, position.y, 0.0f)
         model.scale(size.x, size.y, 1.0f)
 
-        val projection = Matrix4f().ortho(0.0f, windowWidth.toFloat(), windowHeight.toFloat(), 0.0f, -1.0f, 1.0f)
+        val projection = Matrix4f().ortho(0.0f, windowWidth.toFloat(), windowHeight.toFloat(), 0.0f, -1.0f, 1.0f, false)
 
         val projectionLocation = glGetUniformLocation(programId, "projection")
         val modelLocation = glGetUniformLocation(programId, "model")
-        glUniformMatrix4fv(projectionLocation, false, projection.get(FloatArray(16)))
-        glUniformMatrix4fv(modelLocation, false, model.get(FloatArray(16)))
+        glUniformMatrix4fv(projectionLocation, false, projection.getAsFloatArray())
+        glUniformMatrix4fv(modelLocation, false, model.getAsFloatArray())
 
         // Our ModelViewProjection: multiplication of our 3 matrices
         // val mvp = projection.mul(view, Matrix4f()).mul(model, Matrix4f()) // Remember, matrix multiplication is the other way around
@@ -612,10 +619,10 @@ class CubeClicking {
         // Our ModelViewProjection: multiplication of our 3 matrices
         // val mvp = projection.mul(view, Matrix4f()).mul(model, Matrix4f()) // Remember, matrix multiplication is the other way around
 
-        glUniformMatrix4fv(modelLocation, false, model.get(FloatArray(16)))
-        glUniformMatrix4fv(viewLocation, false, view.get(FloatArray(16)))
+        glUniformMatrix4fv(modelLocation, false, model.getAsFloatArray())
+        glUniformMatrix4fv(viewLocation, false, view.getAsFloatArray())
         // The near/far values are necessary to avoid the box clipping, if the near value is near 0 (heh), the box won't be fully rendered (because it is clipping inside)
-        glUniformMatrix4fv(projectionLocation, false, Matrix4f().ortho(0.0f, windowWidth.toFloat(), windowHeight.toFloat(), 0.0f, -16.0f, 1.0f).get(FloatArray(16)))
+        glUniformMatrix4fv(projectionLocation, false, Matrix4f().ortho(0.0f, windowWidth.toFloat(), windowHeight.toFloat(), 0.0f, -16.0f, 1.0f, false).getAsFloatArray())
         glUniform1i(isActiveLocation, 0)
         glUniform1f(timeLocation, GLFW.glfwGetTime().toFloat())
         glUniform3f(cameraPositionLocation, cameraPosition.x, cameraPosition.y, cameraPosition.z)
